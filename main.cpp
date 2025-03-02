@@ -10,7 +10,7 @@
 
 using namespace std::chrono;
 
-const size_t BUFFER_SIZE = 1ULL * 1024ULL * 1024ULL * 1024ULL; // 1 GB
+const size_t BUFFER_SIZE = 256ULL * 1024ULL * 1024ULL; // 256 MB for testing (adjustable to 1ULL * 1024 * 1024 * 1024 for 1 GB)
 const size_t NUM_THREADS = std::thread::hardware_concurrency();
 const int64_t NUM_ITERATIONS = 1000;
 
@@ -23,6 +23,11 @@ void threadWorker(int threadId, size_t chunkSize) {
     size_t startIdx = threadId * chunkSize;
     size_t endIdx = std::min(startIdx + chunkSize, buffer.size());
     int64_t* buf = buffer.data();
+
+    if (startIdx >= BUFFER_SIZE) {
+        std::cout << "Thread " << threadId << " skipped: startIdx exceeds buffer" << std::endl;
+        return;
+    }
 
 #ifdef __AVX2__
     __m256i pattern = _mm256_set1_epi64x(0xDEADBEEFDEADBEEF);
