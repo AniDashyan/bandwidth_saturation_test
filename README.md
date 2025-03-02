@@ -1,4 +1,4 @@
-# Memory Bandwidth Benchmark
+# Memory Bandwidth Saturation Test
 
 ## Overview
 
