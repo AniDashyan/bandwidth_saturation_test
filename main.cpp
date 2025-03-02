@@ -31,7 +31,6 @@ void threadWorker(int threadId, size_t chunkSize) {
 
 #ifdef __AVX2__
     __m256i pattern = _mm256_set1_epi64x(0xDEADBEEFDEADBEEF);
-    _mm_prefetch(reinterpret_cast<const char*>(&buf[startIdx]), _MM_HINT_NTA);
 
     for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
         size_t i = startIdx;
@@ -69,7 +68,7 @@ int main() {
     auto startTime = steady_clock::now();
 
     for (int i = 0; i < NUM_THREADS; ++i) {
-        threads.emplace_back(threadWorker, i, chunkSize);
+        threads.push_back(std::thread(threadWorker, i, chunkSize));
     }
 
     for (auto& t : threads) {
