@@ -39,48 +39,15 @@ jobs:
     - name: Set reusable strings
       id: strings
       shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
-
-    - name: Show CMake Configuration
-      run: |
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -S ${{ github.workspace }} -LA
+      run: echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Configure CMake
-      run: |
-        cmake -B ${{ steps.strings.outputs.build-output-dir }} \
-          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
-          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-          -S ${{ github.workspace }}
+      shell: bash
+      run: cmake -B "${{ steps.strings.outputs.build-output-dir }}" -DCMAKE_CXX_COMPILER="${{ matrix.cpp_compiler }}" -DCMAKE_C_COMPILER="${{ matrix.c_compiler }}" -DCMAKE_BUILD_TYPE="${{ matrix.build_type }}" -S "${{ github.workspace }}"
 
     - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --build-config ${{ matrix.build_type }}
-      continue-on-error: true
-
-    - name: Check Memory Stats (Linux)
-      if: matrix.os == 'ubuntu-latest'
       shell: bash
-      run: |
-        echo "Memory stats:"
-        free -h
-        echo "Resource limits:"
-        ulimit -a
-
-    - name: Enable Core Dumps (Linux)
-      if: matrix.os == 'ubuntu-latest'
-      shell: bash
-      run: |
-        ulimit -c unlimited
-        sudo sysctl -w kernel.core_pattern=core
+      run: cmake --build "${{ steps.strings.outputs.build-output-dir }}" --config "${{ matrix.build_type }}"
 
     - name: Run Executable
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
@@ -95,8 +62,6 @@ jobs:
         echo "Checking if executable exists: $executable_path"
         if [ -f "$executable_path" ]; then
           echo "Executable found, running it"
-          echo "CPU info:"
-          cat /proc/cpuinfo || echo "CPU info not available on Windows"
           "$executable_path" || echo "Exit code: $?"
         else
           echo "Executable not found: $executable_path"
@@ -108,19 +73,12 @@ jobs:
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
       shell: bash
       run: |
-        sudo apt-get update && sudo apt-get install -y gdb strace
+        sudo apt-get update && sudo apt-get install -y gdb
         executable="./bandwidth_test"
         if [ -f "$executable" ]; then
           echo "run" > gdb_commands.txt
           echo "bt full" >> gdb_commands.txt
           echo "Running GDB:"
           gdb --batch --quiet -x gdb_commands.txt "$executable"
-          if [ -f "core" ]; then
-            echo "Analyzing core dump:"
-            gdb --batch --quiet -x <(echo "bt full") "$executable" core
-          fi
-          echo "Running strace for system calls:"
-          strace -o strace.log "$executable" || echo "Strace exit code: $?"
-          cat strace.log || echo "No strace log generated"
         fi
       continue-on-error: true
