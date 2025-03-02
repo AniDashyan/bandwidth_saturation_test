@@ -1,6 +1,3 @@
-Here's the README content converted to markdown format:
-
-```markdown
 # Memory Bandwidth Benchmark
 
 ## Overview
