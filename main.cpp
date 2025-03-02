@@ -3,6 +3,7 @@
 #include <vector>
 #include <chrono>
 #include <atomic>
+#include <iomanip>
 #ifdef __AVX2__
 #include <immintrin.h>
 #endif
@@ -11,58 +12,54 @@ using namespace std::chrono;
 
 const size_t BUFFER_SIZE = 1ULL * 1024ULL * 1024ULL * 1024ULL; // 1 GB
 const size_t NUM_THREADS = std::thread::hardware_concurrency();
-const int NUM_ITERATIONS = 20;
+const int64_t NUM_ITERATIONS = 1000;
 
 std::atomic<size_t> totalBytesProcessed(0);
 
-alignas(64) std::vector<int64_t> buffer(BUFFER_SIZE / sizeof(int64_t), 0);
+alignas(64) std::vector<int64_t> buffer(BUFFER_SIZE / sizeof(int64_t));
 
 void threadWorker(int threadId, size_t chunkSize) {
     size_t bytesProcessed = 0;
     size_t startIdx = threadId * chunkSize;
     size_t endIdx = std::min(startIdx + chunkSize, buffer.size());
-
     int64_t* buf = buffer.data();
 
 #ifdef __AVX2__
-    __m256i pattern = _mm256_set1_epi64x(0xDEADBEEF);
-    for (int iter = 0; iter < NUM_ITERATIONS; ++iter) {
+    __m256i pattern = _mm256_set1_epi64x(0xDEADBEEFDEADBEEF);
+    _mm_prefetch(reinterpret_cast<const char*>(&buf[startIdx]), _MM_HINT_NTA);
+
+    for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
         size_t i = startIdx;
-        for (; i <= endIdx - 16; i += 16) { // Process 128 bytes per loop (4x 32-byte AVX2)
-            __m256i data1 = _mm256_load_si256(reinterpret_cast<__m256i*>(&buf[i]));
-            __m256i data2 = _mm256_load_si256(reinterpret_cast<__m256i*>(&buf[i + 4]));
-            __m256i data3 = _mm256_load_si256(reinterpret_cast<__m256i*>(&buf[i + 8]));
-            __m256i data4 = _mm256_load_si256(reinterpret_cast<__m256i*>(&buf[i + 12]));
+        for (; i <= endIdx - 16; i += 16) {
             _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i]), pattern);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 4]), data1);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 8]), data2);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 12]), data3);
+            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 4]), pattern);
+            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 8]), pattern);
+            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 12]), pattern);
             bytesProcessed += 128;
         }
-        // Handle remaining elements
         for (; i < endIdx; ++i) {
-            buf[i] = 0xDEADBEEF;
+            buf[i] = 42;
             bytesProcessed += sizeof(int64_t);
         }
     }
 #else
-    // Fallback for non-AVX2 systems
-    for (int iter = 0; iter < NUM_ITERATIONS; ++iter) {
+    for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
         for (size_t i = startIdx; i < endIdx; ++i) {
-            buf[i] = 0xDEADBEEF;
+            buf[i] = 42;
             bytesProcessed += sizeof(int64_t);
         }
     }
 #endif
 
-    totalBytesProcessed += bytesProcessed;
+    totalBytesProcessed.fetch_add(bytesProcessed, std::memory_order_relaxed);
 }
 
 int main() {
     size_t chunkSize = buffer.size() / NUM_THREADS;
-    chunkSize -= chunkSize % 16; // Align to 128-byte boundary for AVX2
+    chunkSize -= chunkSize % 16;
 
     std::vector<std::thread> threads;
+    threads.reserve(NUM_THREADS);
 
     auto startTime = steady_clock::now();
 
@@ -77,15 +74,38 @@ int main() {
     auto endTime = steady_clock::now();
     auto totalDuration = duration_cast<milliseconds>(endTime - startTime);
 
-    double totalMB = totalBytesProcessed / (1024.0 * 1024.0);
-    double throughput = totalMB / (totalDuration.count() / 1000.0);
+    double totalGB = totalBytesProcessed / (1024.0 * 1024.0 * 1024.0);
+    double throughput = totalGB / (totalDuration.count() / 1000.0);
 
-    std::cout << "\nTotal Results:" << std::endl;
-    std::cout << "Number of threads: " << NUM_THREADS << std::endl;
-    std::cout << "Total time: " << totalDuration.count() << " ms" << std::endl;
-    std::cout << "Total data processed: " << totalMB << " MB" << std::endl;
-    std::cout << "Throughput: " << throughput << " MB/s" << std::endl;
-    std::cout << "Memory Bandwidth Utilization: " << (throughput / (50 * 1024)) * 100 << " % (assuming 50 GB/s)" << std::endl;
 
-    return 0;
+    // Top border
+    std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
+
+    // Header
+    std::cout << "|" << std::left << std::setw(30) << " Label" << "|" 
+              << std::right  << "Value" << std::setw(25) << "|" << std::endl;
+
+    // Separator
+    std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
+
+    // Rows
+    std::cout << "|" << std::left << std::setw(30) << " Number of threads" << "|" 
+              << std::right << NUM_THREADS << std::setw(28) << "|" << std::endl;
+
+    std::cout << "|" << std::left << std::setw(30) << " Total time" << "|" 
+              << std::right << (std::to_string(totalDuration.count()) + " ms") << std::setw(22) << "|" << std::endl;
+
+    std::cout << "|" << std::left << std::setw(30) << " Total data processed" << "|" 
+              << std::right << std::fixed << std::setprecision(3) << (totalGB) << " GB"  << std::setw(20) << "|" << std::endl;
+
+    std::cout << "|" << std::left << std::setw(30) << " Throughput" << "|" 
+              << std::right << std::fixed << std::setprecision(3) << (throughput) << " GB/s" << std::setw(19) << "|" << std::endl;
+
+    std::cout << "|" << std::left << std::setw(30) << " Memory Bandwidth Utilization"  << "|" 
+              << std::right << std::setprecision(3) << ((throughput / 50.0) * 100) << " % (assuming 50 GB/s)" << std::setw(2) << "|" << std::endl;
+
+    // Bottom border
+    std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
+
+    return (0);
 }
