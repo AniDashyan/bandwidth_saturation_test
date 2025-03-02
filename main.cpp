@@ -2,6 +2,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <string>
 #include <atomic>
 #include <iomanip>
 #ifdef __AVX2__
