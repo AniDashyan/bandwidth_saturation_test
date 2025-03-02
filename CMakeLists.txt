@@ -10,9 +10,9 @@ find_package(Threads REQUIRED)
 target_link_libraries(bandwidth_test PRIVATE Threads::Threads)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(bandwidth_test PRIVATE -mavx2 -O3 -march=native)
+    target_compile_options(bandwidth_test PRIVATE -O3)
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(bandwidth_test PRIVATE /O2 /arch:AVX2)
+    target_compile_options(bandwidth_test PRIVATE /O2)
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES "Release")
