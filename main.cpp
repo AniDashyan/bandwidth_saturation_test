@@ -8,6 +8,8 @@
 #include <immintrin.h>
 #endif
 
+#define NO_AVX2
+
 using namespace std::chrono;
 
 const size_t BUFFER_SIZE = 256ULL * 1024ULL * 1024ULL; // 256 MB for testing (adjustable to 1ULL * 1024 * 1024 * 1024 for 1 GB)
@@ -30,6 +32,7 @@ void threadWorker(int threadId, size_t chunkSize) {
     }
 
 #ifdef __AVX2__
+#ifndef NO_AVX2
     __m256i pattern = _mm256_set1_epi64x(0xDEADBEEFDEADBEEF);
 
     for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
@@ -46,6 +49,15 @@ void threadWorker(int threadId, size_t chunkSize) {
             bytesProcessed += sizeof(int64_t);
         }
     }
+    #else
+    // Scalar path
+    for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
+        for (size_t i = startIdx; i < endIdx; ++i) {
+            buf[i] = 42;
+            bytesProcessed += sizeof(int64_t);
+        }
+    }
+#endif
 #else
     for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
         for (size_t i = startIdx; i < endIdx; ++i) {
@@ -106,7 +118,7 @@ int main() {
               << std::right << std::fixed << std::setprecision(3) << (throughput) << " GB/s" << std::setw(19) << "|" << std::endl;
 
     std::cout << "|" << std::left << std::setw(30) << " Memory Bandwidth Utilization"  << "|" 
-              << std::right << std::setprecision(3) << ((throughput / 50.0) * 100) << " % (assuming 50 GB/s)" << std::setw(2) << "|" << std::endl;
+              << std::right << std::setprecision(3) << ((throughput / 50.0) * 100) << " % (assuming 50 GB/s)" << std::setw(3) << "|" << std::endl;
 
     // Bottom border
     std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
