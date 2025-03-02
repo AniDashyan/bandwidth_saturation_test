@@ -78,10 +78,10 @@ After building, run the executable as shown above. No additional arguments are r
 | Label                        |Value                        |
 +------------------------------------------------------------+
 | Number of threads            |22                           |
-| Total time                   |18107 ms                     |
-| Total data processed         |999.999 GB                   |
-| Throughput                   |55.227 GB/s                  |
-| Memory Bandwidth Utilization |110.454 % (assuming 50 GB/s) |
+| Total time                   |5334 ms                      |
+| Total data processed         |250.000 GB                   |
+| Throughput                   |46.869 GB/s                  |
+| Memory Bandwidth Utilization |93.738 % (assuming 50 GB/s)  |
 +------------------------------------------------------------+
 ```
 
