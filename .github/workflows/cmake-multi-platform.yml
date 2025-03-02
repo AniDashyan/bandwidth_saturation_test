@@ -83,7 +83,7 @@ jobs:
         executable="bandwidth_test"  # Start with base executable name
         
         if [ "$RUNNER_OS" == "Windows" ]; then
-          executable="bandwidth_test.exe"  # Add .exe for Windows
+          executable="bandwidth_test .exe"  # Add .exe for Windows
           # On Windows, we should ensure that we run in the correct directory
           executable_path="${{ github.workspace }}\\build\\${{ matrix.build_type }}\\$executable"  # Absolute path for Windows
         else
