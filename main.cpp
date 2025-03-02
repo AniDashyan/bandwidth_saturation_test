@@ -98,7 +98,7 @@ int main() {
               << std::right << NUM_THREADS << std::setw(28) << "|" << std::endl;
 
     std::cout << "|" << std::left << std::setw(30) << " Total time" << "|" 
-              << std::right << (std::to_string(totalDuration.count()) + " ms") << std::setw(22) << "|" << std::endl;
+              << std::right << (std::to_string(totalDuration.count()) + " ms") << std::setw(23) << "|" << std::endl;
 
     std::cout << "|" << std::left << std::setw(30) << " Total data processed" << "|" 
               << std::right << std::fixed << std::setprecision(3) << (totalGB) << " GB"  << std::setw(20) << "|" << std::endl;
