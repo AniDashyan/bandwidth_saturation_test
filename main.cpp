@@ -9,13 +9,12 @@
 #include <immintrin.h>
 #endif
 
-#define NO_AVX2
-
 using namespace std::chrono;
 
-const size_t BUFFER_SIZE = 256ULL * 1024ULL * 1024ULL; // 256 MB for testing (adjustable to 1ULL * 1024 * 1024 * 1024 for 1 GB)
+const size_t BUFFER_SIZE = 1ULL * 1024ULL * 1024ULL * 1024ULL; 
 const size_t NUM_THREADS = std::thread::hardware_concurrency();
 const int64_t NUM_ITERATIONS = 1000;
+const size_t STRIDE = 16; // Stride of 128 bytes (16 * 8 bytes)
 
 std::atomic<size_t> totalBytesProcessed(0);
 
@@ -33,37 +32,32 @@ void threadWorker(int threadId, size_t chunkSize) {
     }
 
 #ifdef __AVX2__
-#ifndef NO_AVX2
     __m256i pattern = _mm256_set1_epi64x(0xDEADBEEFDEADBEEF);
 
     for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
         size_t i = startIdx;
-        for (; i <= endIdx - 16; i += 16) {
+        // AVX2 streaming writes with stride
+        for (; i <= endIdx - 16; i += STRIDE) {
+            // Read 32 bytes
+            __m256i data = _mm256_load_si256(reinterpret_cast<const __m256i*>(&buf[i]));
+            // Write 32 bytes using streaming store
             _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i]), pattern);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 4]), pattern);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 8]), pattern);
-            _mm256_stream_si256(reinterpret_cast<__m256i*>(&buf[i + 12]), pattern);
-            bytesProcessed += 128;
+            bytesProcessed += 64; // 32 bytes read + 32 bytes written
         }
-        for (; i < endIdx; ++i) {
-            buf[i] = 42;
-            bytesProcessed += sizeof(int64_t);
-        }
-    }
-    #else
-    // Scalar path
-    for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
-        for (size_t i = startIdx; i < endIdx; ++i) {
-            buf[i] = 42;
-            bytesProcessed += sizeof(int64_t);
+        // Scalar path for remaining elements
+        for (; i < endIdx; i += STRIDE) {
+            int64_t value = buf[i]; // Read
+            buf[i] = 42; // Write
+            bytesProcessed += 2 * sizeof(int64_t);
         }
     }
-#endif
 #else
+    // Scalar path with read and write
     for (int64_t iter = 0; iter < NUM_ITERATIONS; ++iter) {
-        for (size_t i = startIdx; i < endIdx; ++i) {
-            buf[i] = 42;
-            bytesProcessed += sizeof(int64_t);
+        for (size_t i = startIdx; i < endIdx; i += STRIDE) {
+            int64_t value = buf[i]; // Read
+            buf[i] = 42; // Write
+            bytesProcessed += 2 * sizeof(int64_t);
         }
     }
 #endif
@@ -72,6 +66,8 @@ void threadWorker(int threadId, size_t chunkSize) {
 }
 
 int main() {
+    std::cout << "Hardware concurrency: " << std::thread::hardware_concurrency() << std::endl;
+
     size_t chunkSize = buffer.size() / NUM_THREADS;
     chunkSize -= chunkSize % 16;
 
@@ -93,7 +89,6 @@ int main() {
 
     double totalGB = totalBytesProcessed / (1024.0 * 1024.0 * 1024.0);
     double throughput = totalGB / (totalDuration.count() / 1000.0);
-
 
     // Top border
     std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
@@ -119,10 +114,10 @@ int main() {
               << std::right << std::fixed << std::setprecision(3) << (throughput) << " GB/s" << std::setw(19) << "|" << std::endl;
 
     std::cout << "|" << std::left << std::setw(30) << " Memory Bandwidth Utilization"  << "|" 
-              << std::right << std::setprecision(3) << ((throughput / 50.0) * 100) << " % (assuming 50 GB/s)" << std::setw(3) << "|" << std::endl;
+              << std::right << std::setprecision(3) << ((throughput / 50.0) * 100) << " % (assuming 50 GB/s)" << std::setw(2) << "|" << std::endl;
 
     // Bottom border
     std::cout << "+" << std::setw(60) << std::setfill('-') << "" << "+" << std::setfill(' ') << std::endl;
 
-    return (0);
+    return 0;
 }
