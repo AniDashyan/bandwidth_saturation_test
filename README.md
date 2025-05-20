@@ -152,8 +152,6 @@ The program was analyzed using **Intel VTune Profiler**, and the results confirm
 
 ![Bandwidth Histogram](./images/profiling_2.png)
 
-> 📎 **Note**: Place `profiling_2.png` under a folder named `images/` in your repository root.
-
 * The histogram shows that the **majority of execution time is spent at or near the maximum observed DRAM bandwidth**.
 * Utilization is concentrated in the **High** (red) region, indicating sustained memory pressure.
 * The **observed maximum** reaches \~83 GB/s, while the **average** remains close, showing consistent high throughput across threads.
@@ -161,8 +159,6 @@ The program was analyzed using **Intel VTune Profiler**, and the results confirm
 ### 🔹 VTune Summary
 
 ![VTune Summary](./images/profiling_summary.png)
-
-> 📎 **Note**: Place `profiling_summary.png` in the same `images/` folder.
 
 | Metric                   | Value                   | Explanation                                                      |
 | ------------------------ | ----------------------- | ---------------------------------------------------------------- |
