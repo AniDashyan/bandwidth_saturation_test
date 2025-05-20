@@ -133,15 +133,46 @@ The program demonstrates the Von Neumann limitation:
 - **Saturation**: By using multiple threads to write to a large buffer simultaneously, the program stresses the memory bus. As thread count increases, contention for the bus grows, potentially reducing throughput per thread.
 - **Observation**: If throughput plateaus or drops despite more threads, it indicates the memory bus is saturated, reflecting the bottleneck.
 
-## Optimization Notes
-
-- **AVX2**: Boosts performance on supported hardware by writing 128 bytes per loop iteration.
-- **Streaming Stores**: Bypasses cache to maximize memory bus usage.
-- **Alignment**: 64-byte alignment optimizes cache and SIMD access.
-- **Thread Count**: Matches hardware concurrency to avoid oversubscription.
-
 ## Limitations
 
 - **Hardware Dependency**: Results vary by CPU (AVX2 support) and memory configuration (e.g., DDR4 vs. DDR5, single vs. dual-channel).
 - **Theoretical Maximum**: Assumes 50 GB/s; adjust this based on your system’s specs for accurate utilization.
 - **Simplified Workload**: Focuses on writes; real-world applications may involve mixed read/write patterns.
+
+
+Certainly! Here's **only the "📈 Profiling Results"** section of your `README.md`, including the explanations and image placeholders:
+
+---
+
+## Profiling Results
+
+The program was analyzed using **Intel VTune Profiler**, and the results confirm that it effectively **saturates the DRAM bandwidth**.
+
+### 🔹 Bandwidth Utilization Histogram
+
+![Bandwidth Histogram](./images/profiling_2.png)
+
+> 📎 **Note**: Place `profiling_2.png` under a folder named `images/` in your repository root.
+
+* The histogram shows that the **majority of execution time is spent at or near the maximum observed DRAM bandwidth**.
+* Utilization is concentrated in the **High** (red) region, indicating sustained memory pressure.
+* The **observed maximum** reaches \~83 GB/s, while the **average** remains close, showing consistent high throughput across threads.
+
+### 🔹 VTune Summary
+
+![VTune Summary](./images/profiling_summary.png)
+
+> 📎 **Note**: Place `profiling_summary.png` in the same `images/` folder.
+
+| Metric                   | Value                   | Explanation                                                      |
+| ------------------------ | ----------------------- | ---------------------------------------------------------------- |
+| **Elapsed Time**         | 16.064 s                | Total measured runtime of the benchmark.                         |
+| **Memory Bound**         | 90.4% of pipeline slots | CPU stalls mostly due to waiting on memory access.               |
+| **DRAM Bound**           | 90.4%                   | Confirms the memory latency is not hidden by caching.            |
+| **DRAM Bandwidth Bound** | 81.5% of elapsed time   | A significant portion of time spent waiting for DRAM throughput. |
+| **Loads**                | \~679 million           | Number of memory read operations.                                |
+| **Stores**               | \~15.8 billion          | Number of memory write operations (dominates due to AVX2).       |
+| **Thread Count**         | 26                      | All logical CPU cores were utilized.                             |
+
+These metrics validate that the program is **memory-bound** and successfully **saturates DRAM bandwidth**, replicating the conditions of a **Von Neumann bottleneck** scenario where throughput is limited not by computation but by memory access speed.
+
