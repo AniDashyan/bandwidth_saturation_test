@@ -38,8 +38,6 @@ git clone https://github.com/username/bandwidth_saturation_test.git
 cd bandwidth_saturation_test
 ```
 
-Replace `https://github.com/username/memory-bandwidth-benchmark.git` with the actual repository URL.
-
 ### Create Build Directory:
 
 ```bash
@@ -140,15 +138,11 @@ The program demonstrates the Von Neumann limitation:
 - **Simplified Workload**: Focuses on writes; real-world applications may involve mixed read/write patterns.
 
 
-Certainly! Here's **only the "📈 Profiling Results"** section of your `README.md`, including the explanations and image placeholders:
-
----
-
 ## Profiling Results
 
 The program was analyzed using **Intel VTune Profiler**, and the results confirm that it effectively **saturates the DRAM bandwidth**.
 
-### 🔹 Bandwidth Utilization Histogram
+###  Bandwidth Utilization Histogram
 
 ![Bandwidth Histogram](./images/profiling_2.png)
 
@@ -156,7 +150,7 @@ The program was analyzed using **Intel VTune Profiler**, and the results confirm
 * Utilization is concentrated in the **High** (red) region, indicating sustained memory pressure.
 * The **observed maximum** reaches \~83 GB/s, while the **average** remains close, showing consistent high throughput across threads.
 
-### 🔹 VTune Summary
+###  VTune Summary
 
 ![VTune Summary](./images/profiling_summary.png)
 
